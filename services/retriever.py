@@ -1,5 +1,8 @@
-from sentence_transformers import SentenceTransformer
+from pathlib import Path
+
 import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 from services.catalog_loader import load_catalog
 
@@ -11,14 +14,24 @@ class SHLRetriever:
     _embeddings = None
     _index = None
 
+    INDEX_DIR = Path("indexes")
+    EMBEDDINGS_FILE = INDEX_DIR / "embeddings.npy"
+    FAISS_FILE = INDEX_DIR / "faiss.index"
+
     def __init__(self):
 
+        # -------------------------
+        # Load catalog
+        # -------------------------
         if SHLRetriever._catalog is None:
             print("Loading SHL Catalog...")
             SHLRetriever._catalog = load_catalog()
 
         self.catalog = SHLRetriever._catalog
 
+        # -------------------------
+        # Load embedding model
+        # -------------------------
         if SHLRetriever._model is None:
             print("Loading Embedding Model...")
             SHLRetriever._model = SentenceTransformer(
@@ -27,6 +40,9 @@ class SHLRetriever:
 
         self.model = SHLRetriever._model
 
+        # -------------------------
+        # Prepare documents
+        # -------------------------
         if SHLRetriever._documents is None:
 
             documents = []
@@ -55,31 +71,73 @@ URL:
 
         self.documents = SHLRetriever._documents
 
+        # -------------------------
+        # Load embeddings
+        # -------------------------
         if SHLRetriever._embeddings is None:
 
-            print("Generating Embeddings...")
+            if self.EMBEDDINGS_FILE.exists():
 
-            SHLRetriever._embeddings = self.model.encode(
-                self.documents,
-                convert_to_numpy=True,
-                show_progress_bar=True
-            )
+                print("Loading saved embeddings...")
 
-            faiss.normalize_L2(SHLRetriever._embeddings)
+                SHLRetriever._embeddings = np.load(
+                    self.EMBEDDINGS_FILE
+                )
+
+            else:
+
+                print("Generating embeddings...")
+
+                SHLRetriever._embeddings = self.model.encode(
+                    self.documents,
+                    convert_to_numpy=True,
+                    show_progress_bar=True
+                )
+
+                faiss.normalize_L2(
+                    SHLRetriever._embeddings
+                )
+
+                self.INDEX_DIR.mkdir(exist_ok=True)
+
+                np.save(
+                    self.EMBEDDINGS_FILE,
+                    SHLRetriever._embeddings
+                )
 
         self.embeddings = SHLRetriever._embeddings
 
+        # -------------------------
+        # Load FAISS index
+        # -------------------------
         if SHLRetriever._index is None:
 
-            print("Creating FAISS Index...")
+            if self.FAISS_FILE.exists():
 
-            dimension = self.embeddings.shape[1]
+                print("Loading saved FAISS index...")
 
-            index = faiss.IndexFlatIP(dimension)
+                SHLRetriever._index = faiss.read_index(
+                    str(self.FAISS_FILE)
+                )
 
-            index.add(self.embeddings)
+            else:
 
-            SHLRetriever._index = index
+                print("Creating FAISS index...")
+
+                dimension = self.embeddings.shape[1]
+
+                index = faiss.IndexFlatIP(
+                    dimension
+                )
+
+                index.add(self.embeddings)
+
+                faiss.write_index(
+                    index,
+                    str(self.FAISS_FILE)
+                )
+
+                SHLRetriever._index = index
 
         self.index = SHLRetriever._index
 
@@ -100,6 +158,7 @@ URL:
         )
 
         results = []
+
         seen = set()
 
         for score, idx in zip(scores[0], indices[0]):
