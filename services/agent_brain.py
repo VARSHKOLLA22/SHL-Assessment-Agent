@@ -1,6 +1,6 @@
 import re
 
-from services.gemini_service import ask_gemini
+from services.groq_service import ask_groq
 
 
 class AgentBrain:
@@ -157,7 +157,7 @@ Conversation:
 {conversation}
 """
 
-        response = ask_gemini(prompt).strip().lower()
+        response = ask_groq(prompt).strip().lower()
 
         if response not in {
             "clarify",

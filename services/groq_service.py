@@ -11,7 +11,7 @@ client = OpenAI(
 )
 
 
-def ask_gemini(prompt: str) -> str:
+def ask_groq(prompt: str) -> str:
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",

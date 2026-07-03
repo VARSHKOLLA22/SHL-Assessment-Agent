@@ -1,4 +1,4 @@
-from services.gemini_service import ask_gemini
+from services.groq_service import ask_groq
 
 
 class ComparisonGenerator:
@@ -49,7 +49,7 @@ Instructions:
 - Keep the response under 200 words.
 """
 
-        response = ask_gemini(prompt).strip()
+        response = ask_groq(prompt).strip()
 
         if response.startswith("```"):
             response = response.replace("```json", "").replace("```", "").strip()

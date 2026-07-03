@@ -51,11 +51,18 @@ class SHLAgent:
 
         # Build conversation
         conversation = "\n".join(
-            message.content for message in messages
+            message.content 
+            for message in messages
+            if message.role == "user"
         )
 
         # Retrieve assessments
-        top_k = 10 if decision == "compare" else 5
+        if decision == "compare":
+            top_k = 10
+        elif decision == "refine":
+            top_k = 15
+        else:
+            top_k = 8
 
         results = self.retriever.search(
             conversation,
@@ -87,7 +94,7 @@ class SHLAgent:
                 "name": assessment["name"],
                 "url": assessment["link"]
             }
-            for assessment in results
+            for assessment in results[:10]
         ]
 
         return {
