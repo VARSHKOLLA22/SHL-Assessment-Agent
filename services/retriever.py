@@ -1,3 +1,5 @@
+import psutil
+import os
 from pathlib import Path
 
 import faiss
@@ -141,7 +143,10 @@ URL:
 
         self.index = SHLRetriever._index
 
-        print("Retriever Ready.")
+        process = psutil.Process(os.getpid())
+        memory = process.memory_info().rss / (1024 * 1024)
+
+        print(f"Retriever Ready. Memory Usage: {memory:.2f} MB")
 
     def search(self, query: str, top_k: int = 5):
 
